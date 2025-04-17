@@ -21,21 +21,21 @@ y_list = []
 
 
 def create_covariance(dim_d, correlation):
-    A = torch.rand(dim_d, dim_d) * 2 - 1
+    A = torch.rand(dim_d, dim_d) - 1
     cov = A @ A.T
     cov += correlation * torch.eye(dim_d)
     return cov
 
-#alternating_tensor = torch.zeros(dim_d)
-#alternating_tensor[1::2] = 3.0
+alternating_mean = torch.zeros(dim_d)
+alternating_mean[1::2] = 2.0
+print("[INFO] alternating_mean:",alternating_mean)
 
-df = 3 # t-dist
 
 mean_1 = torch.zeros(dim_d) 
-mean_2 = torch.ones(dim_d) * 5
+mean_2 = alternating_mean #torch.ones(dim_d) * 2
 
-cov1 = torch.eye(dim_d)
-cov2 = create_covariance(dim_d, correlation=0.2)
+cov1 = 0.5 * torch.eye(dim_d)
+cov2 = create_covariance(dim_d, correlation=1.25)
 
 
 
@@ -46,15 +46,15 @@ if args.is_CP:
 
     for idx in range(num_seq):
 
-        t_dist = torch.distributions.StudentT(df, torch.zeros(dim_d), torch.ones(dim_d)) 
-
         mvn_1 = torch.distributions.MultivariateNormal(mean_1, cov1)
-        t_noise_1 = t_dist.sample((CP_time,))
-        data_1 = 0.5 * mvn_1.sample((CP_time,)) + 0.5 * t_noise_1
+        noise_1 = torch.rand(num_time - CP_time, dim_d) - 1
+        data_1 = 0.5 * mvn_1.sample((CP_time,)) + 0.5 * noise_1
+
 
         mvn_2 = torch.distributions.MultivariateNormal(mean_2, cov2)
-        t_noise_2 = t_dist.sample((num_time - CP_time,))
-        data_2 = 0.5 * mvn_2.sample((num_time - CP_time,)) + 0.5 * t_noise_2
+        t_dist_2 = torch.distributions.StudentT(5, torch.zeros(dim_d), torch.ones(dim_d)) 
+        noise_2 = t_dist_2.sample((num_time - CP_time,))
+        data_2 = 0.5 * mvn_2.sample((num_time - CP_time,)) + 0.5 * noise_2
 
         data = torch.cat((data_1, data_2), dim=0)
         y_list.append(data)
@@ -65,11 +65,10 @@ else:
 
     for idx in range(num_seq):
 
-        t_dist = torch.distributions.StudentT(df, torch.zeros(dim_d), torch.ones(dim_d)) 
-
         mvn_1 = torch.distributions.MultivariateNormal(mean_1, cov1)
-        t_noise_1 = t_dist.sample((num_time,))
-        data_1 = 0.5 * mvn_1.sample((num_time,)) + 0.5 * t_noise_1
+        noise_1 = torch.rand(num_time , dim_d) - 1
+        data_1 = 0.5 * mvn_1.sample((num_time,)) + 0.5 * noise_1
+
         
         y_list.append(data_1)
 
